@@ -1,0 +1,770 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css"><link rel="stylesheet" href="css/L.Control.Locate.min.css">
+        <link rel="stylesheet" href="css/qgis2web.css"><link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/MarkerCluster.css">
+        <link rel="stylesheet" href="css/MarkerCluster.Default.css">
+        <link rel="stylesheet" href="css/leaflet-control-geocoder.Geocoder.css">
+        <link rel="stylesheet" href="css/leaflet-measure.css">
+        <link rel="stylesheet" href="Leaflet-MiniMap-master/dist/Control.MiniMap.min.css">
+        <link rel="stylesheet" href="style.css">
+        <link rel="stylesheet" href="slidemenu/L.Control.SlideMenu.css">
+        <title>Taller2</title>
+    </head>
+  
+    </header>
+    <body>
+        <header>
+            <div id="contenedor">
+                <div id="texto">
+                    <h1>Equipamientos de la comuna 7</h1>
+                </div>
+            </div>
+        </header>
+        
+        <div id="map" style="z-index: 0;">
+            <img id="norte" src="images/norte.png" style="z-index:9999" ></img>
+        </div>
+    
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script><script src="js/L.Control.Locate.min.js"></script>
+        <script src="slidemenu/L.Control.SlideMenu.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet.wms.js"></script>
+        <script src="js/leaflet-control-geocoder.Geocoder.js"></script>
+        <script src="js/leaflet-measure.js"></script>
+        <script src="js/leaflet.markercluster.js"></script>
+        <script src="Leaflet-MiniMap-master/dist/Control.MiniMap.min.js"></script>
+        <script src="data/Comunas_0.js"></script>
+        <script src="data/Barriosysectores_2.js"></script>
+        <script src="data/Salud_5.js"></script>
+        <script src="data/Cultura_6.js"></script>
+        <script src="data/Recreacin_7.js"></script>
+        <script src="data/Culto_8.js"></script>
+        <script src="data/Bienestarsocial_9.js"></script>
+        <script src="data/Centrocomunitario_10.js"></script>
+        <script src="data/Educacin_11.js"></script>
+        <script src="data/Rutascomunitarias_12.js"></script>
+        <script src="data/Puntosdeencuentro_13.js"></script>
+
+        <script>
+        //configuracion del mapa
+
+        //leaflet
+        var map = L.map('map').setView([3.457642, -76.486004], 15); 
+        // Definir las coordenadas de los límites máximos (zona permitida)
+        var maxBounds = L.latLngBounds([3.454735, -76.512571], [3.458090, -76.476249]);
+
+        // Aplicar los límites máximos al mapa
+        map.setMaxBounds(maxBounds);
+
+        // Limitar el zoom para que no pueda alejarse más allá de un cierto nivel
+        map.setMinZoom(15); // Establece el zoom mínimo permitido
+        map.setMaxZoom(18); // Establece el zoom máximo permitido
+
+        //mapa base
+
+        var mapabase = L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', 
+        {
+            maxZoom: 15,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        });
+
+        var mapabase2 = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+            maxZoom: 16
+        });
+        var satelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        });
+
+        L.control.scale({position:'bottomleft'}).addTo(map)	;
+
+        var base = {
+            "Mapa Base": mapabase,
+            "Mapa Base Gris": mapabase2,
+            "Satelite": satelite
+        };
+        var leyenda = L.control.layers(base).addTo(map);
+
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        L.control.locate({locateOptions: {maxZoom: 19}}).addTo(map);
+       
+        var measureControl = new L.Control.Measure({
+            position: 'topleft',
+            primaryLengthUnit: 'meters',
+            secondaryLengthUnit: 'kilometers',
+            primaryAreaUnit: 'sqmeters',
+            secondaryAreaUnit: 'hectares'
+        }).addTo(map);
+
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+            if (bounds_group.getLayers().length) {
+                map.fitBounds(bounds_group.getBounds());
+            }
+            map.setMaxBounds(map.getBounds());
+        }
+        
+        function pop_Comunas_0(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Comuna: </th>\
+                        <td>' + (feature.properties['comuna'] !== null ? autolinker.link(feature.properties['comuna'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style_Comunas_0_0(feature) {
+            switch(String(feature.properties['comuna'])) {
+                case '[1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 17, 20, 19, 21, 22]':
+                    return {
+                pane: 'pane_Comunas_0',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,255,255,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '7':
+                    return {
+                pane: 'pane_Comunas_0',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(172,197,157,1.0)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_Comunas_0');
+        map.getPane('pane_Comunas_0').style.zIndex = 400;
+        map.getPane('pane_Comunas_0').style['mix-blend-mode'] = 'normal';
+        var layer_Comunas_0 = new L.geoJson(json_Comunas_0, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Comunas_0',
+            layerName: 'layer_Comunas_0',
+            pane: 'pane_Comunas_0',
+            onEachFeature: pop_Comunas_0,
+            style: style_Comunas_0_0,
+        });
+        bounds_group.addLayer(layer_Comunas_0);
+        map.addLayer(layer_Comunas_0);
+        map.createPane('pane_Via_1');
+        map.getPane('pane_Via_1').style.zIndex = 401;
+        var layer_Via_1 = L.WMS.layer("https://www.geo.cvc.gov.co/arcgis/services/CARTO_BASICA/Infraestructura/MapServer/WMSServer", "0", {
+            pane: 'pane_Via_1',
+            format: 'image/png',
+            uppercase: true,
+            transparent: true,
+            continuousWorld : true,
+            tiled: true,
+            info_format: 'text/html',
+            opacity: 1,
+            identify: false,
+            attribution: '',
+        });
+        map.addLayer(layer_Via_1);
+        function pop_Barriosysectores_2(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Barrio: </th>\
+                        <td>' + (feature.properties['barrio'] !== null ? autolinker.link(feature.properties['barrio'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style_Barriosysectores_2_0() {
+            return {
+                pane: 'pane_Barriosysectores_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0, 
+                fillOpacity: 0,
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Barriosysectores_2');
+        map.getPane('pane_Barriosysectores_2').style.zIndex = 402;
+        map.getPane('pane_Barriosysectores_2').style['mix-blend-mode'] = 'normal';
+        var layer_Barriosysectores_2 = new L.geoJson(json_Barriosysectores_2, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Barriosysectores_2',
+            layerName: 'layer_Barriosysectores_2',
+            pane: 'pane_Barriosysectores_2',
+            onEachFeature: pop_Barriosysectores_2,
+            style: style_Barriosysectores_2_0,
+        });
+        bounds_group.addLayer(layer_Barriosysectores_2);
+        map.addLayer(layer_Barriosysectores_2);
+        map.createPane('pane_Manzanas_3');
+        map.getPane('pane_Manzanas_3').style.zIndex = 403;
+        var layer_Manzanas_3 = L.WMS.layer("http://ws-idesc.cali.gov.co:8081/geoserver/wms?version=1.1.0", "idesc:mc_manzanas", {
+            pane: 'pane_Manzanas_3',
+            format: 'image/png',
+            uppercase: true,
+            transparent: true,
+            continuousWorld : true,
+            tiled: true,
+            info_format: 'text/html',
+            opacity: 1,
+            attribution: '',
+        });
+        map.addLayer(layer_Manzanas_3);
+        map.createPane('pane_Ros_4');
+        map.getPane('pane_Ros_4').style.zIndex = 404;
+        var layer_Ros_4 = L.WMS.layer("http://ws-idesc.cali.gov.co:8081/geoserver/wms?version=1.1.0", "pot_2014:bcs_hid_rios", {
+            pane: 'pane_Ros_4',
+            format: 'image/png',
+            uppercase: true,
+            transparent: true,
+            continuousWorld : true,
+            tiled: true,
+            info_format: 'text/html',
+            opacity: 1,
+            attribution: '',
+        });
+        map.addLayer(layer_Ros_4);
+        function pop_Salud_5(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Nombre</th>\
+                        <td>' + (feature.properties['nombre'] !== null ? autolinker.link(feature.properties['nombre'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Localización</th>\
+                        <td>' + (feature.properties['localizaci'] !== null ? autolinker.link(feature.properties['localizaci'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Servicio</th>\
+                        <td>' + (feature.properties['servicio'] !== null ? autolinker.link(feature.properties['servicio'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style_Salud_5_0() {
+            return {
+                pane: 'pane_Salud_5',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(130,94,101,1.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Salud_5');
+        map.getPane('pane_Salud_5').style.zIndex = 405;
+        map.getPane('pane_Salud_5').style['mix-blend-mode'] = 'normal';
+        var layer_Salud_5 = new L.geoJson(json_Salud_5, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Salud_5',
+            layerName: 'layer_Salud_5',
+            pane: 'pane_Salud_5',
+            onEachFeature: pop_Salud_5,
+            style: style_Salud_5_0,
+        });
+        bounds_group.addLayer(layer_Salud_5);
+        map.addLayer(layer_Salud_5);
+        function pop_Cultura_6(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Nombre</th>\
+                        <td>' + (feature.properties['nombre'] !== null ? autolinker.link(feature.properties['nombre'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Localización</th>\
+                        <td>' + (feature.properties['localizaci'] !== null ? autolinker.link(feature.properties['localizaci'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Servicio</th>\
+                        <td>' + (feature.properties['servicio'] !== null ? autolinker.link(feature.properties['servicio'].toLocaleString()) : '') + '</td>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style_Cultura_6_0() {
+            return {
+                pane: 'pane_Cultura_6',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(204,131,131,1.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Cultura_6');
+        map.getPane('pane_Cultura_6').style.zIndex = 406;
+        map.getPane('pane_Cultura_6').style['mix-blend-mode'] = 'normal';
+        var layer_Cultura_6 = new L.geoJson(json_Cultura_6, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Cultura_6',
+            layerName: 'layer_Cultura_6',
+            pane: 'pane_Cultura_6',
+            onEachFeature: pop_Cultura_6,
+            style: style_Cultura_6_0,
+        });
+        bounds_group.addLayer(layer_Cultura_6);
+        map.addLayer(layer_Cultura_6);
+        function pop_Recreacin_7(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Nombre</th>\
+                        <td>' + (feature.properties['nombre'] !== null ? autolinker.link(feature.properties['nombre'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Localización</th>\
+                        <td>' + (feature.properties['localizaci'] !== null ? autolinker.link(feature.properties['localizaci'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Servicio</th>\
+                        <td>' + (feature.properties['servicio'] !== null ? autolinker.link(feature.properties['servicio'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Tipo</th>\
+                        <td>' + (feature.properties['tipo'] !== null ? autolinker.link(feature.properties['tipo'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Propiedad</th>\
+                        <td>' + (feature.properties['propiedad'] !== null ? autolinker.link(feature.properties['propiedad'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style_Recreacin_7_0() {
+            return {
+                pane: 'pane_Recreacin_7',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(245,235,176,1.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Recreacin_7');
+        map.getPane('pane_Recreacin_7').style.zIndex = 407;
+        map.getPane('pane_Recreacin_7').style['mix-blend-mode'] = 'normal';
+        var layer_Recreacin_7 = new L.geoJson(json_Recreacin_7, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Recreacin_7',
+            layerName: 'layer_Recreacin_7',
+            pane: 'pane_Recreacin_7',
+            onEachFeature: pop_Recreacin_7,
+            style: style_Recreacin_7_0,
+        });
+        bounds_group.addLayer(layer_Recreacin_7);
+        map.addLayer(layer_Recreacin_7);
+        function pop_Culto_8(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Nombre</th>\
+                        <td>' + (feature.properties['nombre'] !== null ? autolinker.link(feature.properties['nombre'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Localizaci</th>\
+                        <td>' + (feature.properties['localizaci'] !== null ? autolinker.link(feature.properties['localizaci'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Servicio</th>\
+                        <td>' + (feature.properties['servicio'] !== null ? autolinker.link(feature.properties['servicio'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Tipo</th>\
+                        <td>' + (feature.properties['tipo'] !== null ? autolinker.link(feature.properties['tipo'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Propiedad</th>\
+                        <td>' + (feature.properties['propiedad'] !== null ? autolinker.link(feature.properties['propiedad'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style_Culto_8_0() {
+            return {
+                pane: 'pane_Culto_8',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(218,208,97,1.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Culto_8');
+        map.getPane('pane_Culto_8').style.zIndex = 408;
+        map.getPane('pane_Culto_8').style['mix-blend-mode'] = 'normal';
+        var layer_Culto_8 = new L.geoJson(json_Culto_8, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Culto_8',
+            layerName: 'layer_Culto_8',
+            pane: 'pane_Culto_8',
+            onEachFeature: pop_Culto_8,
+            style: style_Culto_8_0,
+        });
+        bounds_group.addLayer(layer_Culto_8);
+        map.addLayer(layer_Culto_8);
+        function pop_Bienestarsocial_9(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Nombre</th>\
+                        <td>' + (feature.properties['nombre'] !== null ? autolinker.link(feature.properties['nombre'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Localizaci</th>\
+                        <td>' + (feature.properties['localizaci'] !== null ? autolinker.link(feature.properties['localizaci'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Servicio</th>\
+                        <td>' + (feature.properties['servicio'] !== null ? autolinker.link(feature.properties['servicio'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Tipo</th>\
+                        <td>' + (feature.properties['tipo'] !== null ? autolinker.link(feature.properties['tipo'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Propiedad</th>\
+                        <td>' + (feature.properties['propiedad'] !== null ? autolinker.link(feature.properties['propiedad'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style_Bienestarsocial_9_0() {
+            return {
+                pane: 'pane_Bienestarsocial_9',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(235,196,169,1.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Bienestarsocial_9');
+        map.getPane('pane_Bienestarsocial_9').style.zIndex = 409;
+        map.getPane('pane_Bienestarsocial_9').style['mix-blend-mode'] = 'normal';
+        var layer_Bienestarsocial_9 = new L.geoJson(json_Bienestarsocial_9, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Bienestarsocial_9',
+            layerName: 'layer_Bienestarsocial_9',
+            pane: 'pane_Bienestarsocial_9',
+            onEachFeature: pop_Bienestarsocial_9,
+            style: style_Bienestarsocial_9_0,
+        });
+        bounds_group.addLayer(layer_Bienestarsocial_9);
+        map.addLayer(layer_Bienestarsocial_9);
+        function pop_Centrocomunitario_10(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Nombre</th>\
+                        <td>' + (feature.properties['nombre'] !== null ? autolinker.link(feature.properties['nombre'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Tipo de actividad</th>\
+                        <td>' + (feature.properties['tipo_actividad'] !== null ? autolinker.link(feature.properties['tipo_actividad'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Horario</th>\
+                        <td>' + (feature.properties['horario'] !== null ? autolinker.link(feature.properties['horario'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style_Centrocomunitario_10_0() {
+            return {
+                pane: 'pane_Centrocomunitario_10',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(190,178,151,1.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Centrocomunitario_10');
+        map.getPane('pane_Centrocomunitario_10').style.zIndex = 410;
+        map.getPane('pane_Centrocomunitario_10').style['mix-blend-mode'] = 'normal';
+        var layer_Centrocomunitario_10 = new L.geoJson(json_Centrocomunitario_10, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Centrocomunitario_10',
+            layerName: 'layer_Centrocomunitario_10',
+            pane: 'pane_Centrocomunitario_10',
+            onEachFeature: pop_Centrocomunitario_10,
+            style: style_Centrocomunitario_10_0,
+        });
+        bounds_group.addLayer(layer_Centrocomunitario_10);
+        map.addLayer(layer_Centrocomunitario_10);
+        function pop_Educacin_11(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Nombre</th>\
+                        <td>' + (feature.properties['nombre'] !== null ? autolinker.link(feature.properties['nombre'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Localización</th>\
+                        <td>' + (feature.properties['localizaci'] !== null ? autolinker.link(feature.properties['localizaci'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Servicio</th>\
+                        <td>' + (feature.properties['servicio'] !== null ? autolinker.link(feature.properties['servicio'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Tipo</th>\
+                        <td>' + (feature.properties['tipo'] !== null ? autolinker.link(feature.properties['tipo'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Nivel</th>\
+                        <td>' + (feature.properties['nivel'] !== null ? autolinker.link(feature.properties['nivel'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Propiedad</th>\
+                        <td>' + (feature.properties['propiedad'] !== null ? autolinker.link(feature.properties['propiedad'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style_Educacin_11_0() {
+            return {
+                pane: 'pane_Educacin_11',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(226,170,28,1.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Educacin_11');
+        map.getPane('pane_Educacin_11').style.zIndex = 411;
+        map.getPane('pane_Educacin_11').style['mix-blend-mode'] = 'normal';
+        var layer_Educacin_11 = new L.geoJson(json_Educacin_11, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Educacin_11',
+            layerName: 'layer_Educacin_11',
+            pane: 'pane_Educacin_11',
+            onEachFeature: pop_Educacin_11,
+            style: style_Educacin_11_0,
+        });
+        bounds_group.addLayer(layer_Educacin_11);
+        map.addLayer(layer_Educacin_11);
+        function pop_Rutascomunitarias_12(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Tipo</th>\
+                        <td>' + (feature.properties['tipo'] !== null ? autolinker.link(feature.properties['tipo'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style_Rutascomunitarias_12_0() {
+            return {
+                pane: 'pane_Rutascomunitarias_12',
+                opacity: 1,
+                color: 'rgba(119,108,90,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 3.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Rutascomunitarias_12');
+        map.getPane('pane_Rutascomunitarias_12').style.zIndex = 412;
+        map.getPane('pane_Rutascomunitarias_12').style['mix-blend-mode'] = 'normal';
+        var layer_Rutascomunitarias_12 = new L.geoJson(json_Rutascomunitarias_12, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Rutascomunitarias_12',
+            layerName: 'layer_Rutascomunitarias_12',
+            pane: 'pane_Rutascomunitarias_12',
+            onEachFeature: pop_Rutascomunitarias_12,
+            style: style_Rutascomunitarias_12_0,
+        });
+        bounds_group.addLayer(layer_Rutascomunitarias_12);
+        map.addLayer(layer_Rutascomunitarias_12);
+        function pop_Puntosdeencuentro_13(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Horario</th>\
+                        <td>' + (feature.properties['horario'] !== null ? autolinker.link(feature.properties['horario'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Capacidad</th>\
+                        <td>' + (feature.properties['capacidad'] !== null ? autolinker.link(feature.properties['capacidad'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style_Puntosdeencuentro_13_0() {
+            return {
+                pane: 'pane_Puntosdeencuentro_13',
+                radius: 5.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(62,55,66,1.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Puntosdeencuentro_13');
+        map.getPane('pane_Puntosdeencuentro_13').style.zIndex = 413;
+        map.getPane('pane_Puntosdeencuentro_13').style['mix-blend-mode'] = 'normal';
+        var layer_Puntosdeencuentro_13 = new L.geoJson(json_Puntosdeencuentro_13, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Puntosdeencuentro_13',
+            layerName: 'layer_Puntosdeencuentro_13',
+            pane: 'pane_Puntosdeencuentro_13',
+            onEachFeature: pop_Puntosdeencuentro_13,
+            pointToLayer: function (feature, latlng) {
+                var context = {
+                    feature: feature,
+                    variables: {}
+                };
+                return L.circleMarker(latlng, style_Puntosdeencuentro_13_0(feature));
+            },
+        });
+        var cluster_Puntosdeencuentro_13 = new L.MarkerClusterGroup({showCoverageOnHover: false,
+            spiderfyDistanceMultiplier: 2});
+        cluster_Puntosdeencuentro_13.addLayer(layer_Puntosdeencuentro_13);
+
+        bounds_group.addLayer(layer_Puntosdeencuentro_13);
+        cluster_Puntosdeencuentro_13.addTo(map);
+
+        var osmGeocoder = new L.Control.Geocoder({
+            collapsed: true,
+            position: 'topleft',
+            text: 'Search',
+            title: 'Testing'
+        }).addTo(map);
+        document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
+        .className += ' fa fa-search';
+        document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
+        .title += 'Search for a place';
+        setBounds();
+
+        
+        //minimapa
+        var OpenStreetMap_Mapnik = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        });
+
+        var miniMap = new L.Control.MiniMap(OpenStreetMap_Mapnik,{
+            toggleDisplay: true
+        }).addTo(map);
+
+        leyenda.addOverlay( layer_Comunas_0, 'Comuna');
+        leyenda.addOverlay(layer_Via_1, 'Vías');
+        leyenda.addOverlay(layer_Barriosysectores_2, 'Barrios');
+        leyenda.addOverlay(layer_Manzanas_3, 'Manzanas');
+        leyenda.addOverlay(layer_Ros_4, 'Ríos');
+        leyenda.addOverlay(layer_Salud_5, 'Salud');
+        leyenda.addOverlay(layer_Cultura_6, 'Cultura');
+        leyenda.addOverlay(layer_Recreacin_7, 'Recreación');
+        leyenda.addOverlay(layer_Culto_8, 'Culto');
+        leyenda.addOverlay(layer_Bienestarsocial_9, 'Bienestar social');
+        leyenda.addOverlay(layer_Centrocomunitario_10, 'Centro Comunitario');
+        leyenda.addOverlay(layer_Educacin_11, 'Educación');
+        leyenda.addOverlay(layer_Rutascomunitarias_12, 'Rutas comunitarias');
+        leyenda.addOverlay(layer_Puntosdeencuentro_13, 'Puntos de encuentro');
+
+        //slide menu
+        var right = '<h2>Taller 2</h2>';
+            var contents = '<hr>';
+            contents += '<h3><p align="center">La función principal de este geovisor es proporcionar a los usuarios una representación gráfica de la ubicación y distribución de equipamientos como escuelas, centros de salud, centros culturales, lugares para la recreación, centros comunitarios, entre otros, en la Comuna 7 de Cali. </p></h2><br>';
+	
+        var slideMenu = L.control.slideMenu('', {position: 'topright', menuposition: 'topright', width: '30%', height: '400px', delay: '50', icon: 'fa-chevron-left'}).addTo(map);
+        slideMenu.setContents(right + contents);
+
+
+
+        </script>
+    </body>
+</html>
